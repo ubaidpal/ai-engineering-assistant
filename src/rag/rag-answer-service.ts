@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { ChunkRetriever } from "./chunk-retriever.js";
 import type { RAGAIProvider } from "./rag-ai-provider.js";
 import {
@@ -23,10 +24,17 @@ export class RAGAnswerService {
     private readonly logger: RAGLogger = new ConsoleRAGLogger()
   ) {}
 
-  async answer(question: string): Promise<RAGAnswer> {
+  async answer(
+    question: string,
+    requestId: string = randomUUID()
+  ): Promise<RAGAnswer> {
     const startedAt = Date.now();
+    let retrievalDurationMs: number | undefined;
+    let generationDurationMs: number | undefined;
 
     try {
+      const retrievalStartedAt = Date.now();
+
       const evidence = await this.retriever.retrieve(
         question,
         3,
@@ -34,10 +42,14 @@ export class RAGAnswerService {
         this.options.maxPerSource
       );
 
+      retrievalDurationMs = Date.now() - retrievalStartedAt;
+
       if (evidence.length === 0) {
         this.logger.log({
           event: "answer",
+          requestId,
           durationMs: Date.now() - startedAt,
+          retrievalDurationMs,
           retrievedChunks: 0,
           sources: [],
           outcome: "empty"
@@ -50,9 +62,13 @@ export class RAGAnswerService {
         };
       }
 
+      const generationStartedAt = Date.now();
+
       const answer = (
         await this.aiProvider.answerWithContext(question, evidence)
       ).trim();
+
+      generationDurationMs = Date.now() - generationStartedAt;
 
       if (!answer) {
         throw new Error("The AI provider returned no answer.");
@@ -62,7 +78,10 @@ export class RAGAnswerService {
 
       this.logger.log({
         event: "answer",
+        requestId,
         durationMs: Date.now() - startedAt,
+        retrievalDurationMs,
+        generationDurationMs,
         retrievedChunks: evidence.length,
         sources,
         outcome: "success"
@@ -72,7 +91,10 @@ export class RAGAnswerService {
     } catch (error) {
       this.logger.log({
         event: "answer",
+        requestId,
         durationMs: Date.now() - startedAt,
+        retrievalDurationMs,
+        generationDurationMs,
         outcome: "error"
       });
 

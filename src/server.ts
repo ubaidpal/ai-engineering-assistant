@@ -100,7 +100,15 @@ export function buildServer({
         }
 
         try {
-          return await ragAnswerService.answer(question);
+          const result = await ragAnswerService.answer(
+            question,
+            request.id
+          );
+
+          return {
+            ...result,
+            requestId: request.id
+          };
         } catch (error: unknown) {
           request.log.error({ err: error }, "RAG request failed");
 
@@ -136,10 +144,18 @@ export function buildServer({
         const { question } = request.body;
 
         try {
-          return await semanticRagAnswerService.answer(question);
+          const result = await semanticRagAnswerService.answer(
+            question,
+            request.id
+          );
+
+          return {
+            ...result,
+            requestId: request.id
+          };
         } catch (error: unknown) {
           request.log.error(
-            { err: error },
+            { err: error, requestId: request.id },
             "Semantic RAG request failed"
           );
 

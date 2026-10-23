@@ -57,6 +57,10 @@ describe("RAGAnswerService logging", () => {
       outcome: "success"
     });
     expect(events[0].durationMs).toEqual(expect.any(Number));
+    expect(events[0].retrievalDurationMs).toEqual(expect.any(Number));
+    expect(events[0].generationDurationMs).toEqual(expect.any(Number));
+    expect(events[0].requestId).toEqual(expect.any(String));
+    expect(events[0].requestId).not.toBe("");
   });
 
   it("logs empty retrieval without calling the AI provider", async () => {
@@ -80,6 +84,10 @@ describe("RAGAnswerService logging", () => {
       sources: [],
       outcome: "empty"
     });
+    expect(events[0].retrievalDurationMs).toEqual(expect.any(Number));
+    expect(events[0].generationDurationMs).toBeUndefined();
+    expect(events[0].requestId).toEqual(expect.any(String));
+    expect(events[0].requestId).not.toBe("");
   });
 
   it("logs provider failures and rethrows the error", async () => {
@@ -105,5 +113,26 @@ describe("RAGAnswerService logging", () => {
       outcome: "error"
     });
     expect(events[0].durationMs).toEqual(expect.any(Number));
+    expect(events[0].retrievalDurationMs).toEqual(expect.any(Number));
+    expect(events[0].generationDurationMs).toBeUndefined();
+    expect(events[0].requestId).toEqual(expect.any(String));
+    expect(events[0].requestId).not.toBe("");
+  });
+
+  it("preserves a caller-supplied request ID", async () => {
+    const retriever: ChunkRetriever = {
+      retrieve: vi.fn().mockResolvedValue([makeChunk("microservices.md")])
+    };
+
+    const aiProvider: RAGAIProvider = {
+      answerWithContext: vi.fn().mockResolvedValue("Example answer")
+    };
+
+    const { logger, events } = makeLogger();
+    const service = new RAGAnswerService(retriever, aiProvider, {}, logger);
+
+    await service.answer("Explain microservices", "http-request-123");
+
+    expect(events[0].requestId).toBe("http-request-123");
   });
 });

@@ -99,7 +99,8 @@ describe("RAG API", () => {
       expect(response.json()).toEqual({
         answer:
           "Start with a modular monolith when simplicity matters.",
-        sources: ["modular-monolith.md"]
+        sources: ["modular-monolith.md"],
+        requestId: expect.any(String)
       });
       expect(provider.answerWithContext).toHaveBeenCalledOnce();
     } finally {

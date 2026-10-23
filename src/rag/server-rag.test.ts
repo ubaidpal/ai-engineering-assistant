@@ -49,7 +49,8 @@ describe("RAG HTTP endpoint", () => {
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual({
         answer: "A modular monolith simplifies deployment.",
-        sources: ["modular-monolith.md"]
+        sources: ["modular-monolith.md"],
+        requestId: expect.any(String)
       });
       expect(ragProvider.answerWithContext).toHaveBeenCalledOnce();
     } finally {
@@ -106,13 +107,18 @@ describe("RAG HTTP endpoint", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({
-        answer: "A modular monolith simplifies deployment.",
-        sources: ["modular-monolith.md"]
-      });
+
+      const body = response.json();
+      expect(body.answer).toBe(
+        "A modular monolith simplifies deployment."
+      );
+      expect(body.sources).toEqual(["modular-monolith.md"]);
+      expect(body.requestId).toEqual(expect.any(String));
+      expect(body.requestId).not.toBe("");
 
       expect(semanticRagAnswerService.answer).toHaveBeenCalledWith(
-        "When should I use a modular monolith?"
+        "When should I use a modular monolith?",
+        body.requestId
       );
     } finally {
       await server.close();

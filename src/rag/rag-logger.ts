@@ -1,6 +1,9 @@
 export type RAGLogEvent = {
   event: string;
+  requestId?: string;
   durationMs?: number;
+  retrievalDurationMs?: number;
+  generationDurationMs?: number;
   retrievedChunks?: number;
   sources?: string[];
   outcome?: "success" | "empty" | "error";
