@@ -1,24 +1,27 @@
-import type { AIProvider } from "./ai-provider.js";
+import type { ChunkRetriever } from "./rag/chunk-retriever.js";
+import type { RAGAIProvider } from "./rag/rag-ai-provider.js";
+import { RAGAnswerService } from "./rag/rag-answer-service.js";
 import {
   validateRequest,
   type ArchitectureRequest
 } from "./validation.js";
 
 export class ArchitectureService {
-  constructor(private readonly provider: AIProvider) {}
+  private readonly ragAnswerService: RAGAnswerService;
+
+  constructor(
+    provider: RAGAIProvider,
+    retriever: ChunkRetriever
+  ) {
+    this.ragAnswerService = new RAGAnswerService(retriever, provider);
+  }
 
   async answer(
     request: ArchitectureRequest
   ): Promise<{ answer: string }> {
     const validRequest = validateRequest(request);
-    const answer = await this.provider.answer(
-      validRequest.question
-    );
+    const result = await this.ragAnswerService.answer(validRequest.question);
 
-    if (!answer.trim()) {
-      throw new Error("The AI provider returned no answer.");
-    }
-
-    return { answer: answer.trim() };
+    return { answer: result.answer };
   }
 }

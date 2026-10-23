@@ -1,13 +1,22 @@
 import Fastify from "fastify";
 import { ArchitectureService } from "./architecture-service.js";
+import type { RAGAnswerService } from "./rag/rag-answer-service.js";
 
 type ServerOptions = {
   service: ArchitectureService;
+  ragAnswerService?: RAGAnswerService;
+  semanticRagAnswerService?: RAGAnswerService;
+  logger?: boolean;
 };
 
-export function buildServer({ service }: ServerOptions) {
+export function buildServer({
+  service,
+  ragAnswerService,
+  semanticRagAnswerService,
+  logger = true
+}: ServerOptions) {
   const app = Fastify({
-    logger: true
+    logger
   });
 
   app.post<{ Body: { question: string } }>(
@@ -60,6 +69,87 @@ export function buildServer({ service }: ServerOptions) {
       }
     }
   );
+
+  if (ragAnswerService) {
+    app.post<{ Body: { question: string } }>(
+      "/api/rag/answer",
+      {
+        schema: {
+          body: {
+            type: "object",
+            additionalProperties: false,
+            required: ["question"],
+            properties: {
+              question: {
+                type: "string",
+                minLength: 1,
+                maxLength: 2000
+              }
+            }
+          }
+        }
+      },
+      async (request, reply) => {
+        const question = request.body.question.trim();
+
+        if (!question) {
+          return reply.code(400).send({
+            error: "INVALID_QUESTION",
+            message: "Question must not be empty."
+          });
+        }
+
+        try {
+          return await ragAnswerService.answer(question);
+        } catch (error: unknown) {
+          request.log.error({ err: error }, "RAG request failed");
+
+          return reply.code(502).send({
+            error: "RAG_PROVIDER_FAILURE",
+            message: "Unable to generate an answer right now."
+          });
+        }
+      }
+    );
+  }
+
+  if (semanticRagAnswerService) {
+    app.post<{ Body: { question: string } }>(
+      "/api/rag/semantic/answer",
+      {
+        schema: {
+          body: {
+            type: "object",
+            required: ["question"],
+            additionalProperties: false,
+            properties: {
+              question: {
+                type: "string",
+                minLength: 1,
+                maxLength: 4000
+              }
+            }
+          }
+        }
+      },
+      async (request, reply) => {
+        const { question } = request.body;
+
+        try {
+          return await semanticRagAnswerService.answer(question);
+        } catch (error: unknown) {
+          request.log.error(
+            { err: error },
+            "Semantic RAG request failed"
+          );
+
+          return reply.code(502).send({
+            error: "Semantic RAG request failed."
+          });
+        }
+      }
+    );
+  }
 
   return app;
 }

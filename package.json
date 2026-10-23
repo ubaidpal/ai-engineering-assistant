@@ -2,12 +2,14 @@
     "name": "ai-engineering-assistant",
     "version": "1.0.0",
     "description": "AI Engineering Assistant",
-    "main": "src/index.ts",
+    "main": "src/http.ts",
     "scripts": {
-        "dev": "tsx src/index.ts",
+        "dev": "tsx src/http.ts",
         "check": "tsc --noEmit",
         "test": "vitest run",
-        "start:api": "tsx src/index.ts"
+        "start:api": "tsx src/http.ts",
+        "rag": "tsx src/rag-cli.ts",
+        "evaluate:retrieval": "tsx src/rag/evaluate-retrieval.ts"
     },
     "keywords": [],
     "author": "Ubaid ullah",
